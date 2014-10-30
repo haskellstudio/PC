@@ -35,17 +35,37 @@
                 [(capture body)
                  (value-of body (envr_extend k env) k)]
                 [(return vexp kexp)
-                 (value-of kexp env (lambda (k^) (value-of vexp env k^)))]
-                [(let vexp body) (value-of vexp env (lambda (v) (value-of body (envr_extend v env) k)))]
+                 (value-of kexp env (ret-k vexp env))]
+                [(let vexp body) (value-of vexp env (let-k body env k))]
                 [(lambda body) (app-k k (clos_closure body env))]
                 [(app rator rand)
-                 (value-of rator env (lambda (clos) (value-of rand env (lambda (a) (apply-closure clos a k)))))])))
+                 (value-of rator env (rator-k rand env k))])))
+
+;;rator-k
+(define rator-k
+  (lambda (rand env k)
+    (lambda (clos)
+      (value-of rand env (rand-k clos k)))))
+
+
+;;rand-k
+(define rand-k
+  (lambda (clos k)
+    (lambda (a)
+      (apply-closure clos a k))))
+
 
 ;;does let?
+(define let-k
+  (lambda (body env k)
+    (lambda (v)
+      (value-of body (envr_extend v env) k))))
 
-;;does return?
-
-;;does capture need one?
+;;does return
+(define ret-k
+  (lambda (vexp env)
+    (lambda (k^)
+      (value-of vexp env k^))))
 
 ;;zero l
 (define zero-k
