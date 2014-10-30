@@ -22,24 +22,58 @@
 (define value-of
   (lambda (expr env k)
     (union-case expr exp
-                [(const n) (k n)]
+                [(const n) (app-k k n)]
                 [(var v) (apply-env env v k)]
                 [(if test conseq alt)
                  (value-of test env (lambda (t)
                                       (if t
                                           (value-of conseq env k)
                                           (value-of alt env k))))]
-                [(mult rand1 rand2) (value-of rand1 env (lambda (n1)  (value-of rand2 env (lambda (n2) (k (* n1 n2))))))]
-                [(sub1 rand) (value-of rand env (lambda (n) (k (- n 1))))]
-                [(zero rand) (value-of rand env (lambda (n) (k (zero? n))))]
+                [(mult rand1 rand2) (value-of rand1 env (mult-outer-k rand2 env k))]
+                [(sub1 rand) (value-of rand env (sub1-k k))]
+                [(zero rand) (value-of rand env (zero-k k))]
                 [(capture body)
                  (value-of body (envr_extend k env) k)]
                 [(return vexp kexp)
                  (value-of kexp env (lambda (k^) (value-of vexp env k^)))]
                 [(let vexp body) (value-of vexp env (lambda (v) (value-of body (envr_extend v env) k)))]
-                [(lambda body) (k (clos_closure body env))]
+                [(lambda body) (app-k k (clos_closure body env))]
                 [(app rator rand)
                  (value-of rator env (lambda (clos) (value-of rand env (lambda (a) (apply-closure clos a k)))))])))
+
+;;does let?
+
+;;does return?
+
+;;does capture need one?
+
+;;zero l
+(define zero-k
+  (lambda (k)
+    (lambda (n)
+      (app-k k (zero? n)))))
+
+;;sub1 k
+(define sub1-k
+  (lambda (k)
+    (lambda (n)
+      (app-k k (- n 1)))))
+
+;;mult inner and outer k
+(define mult-inner-k
+  (lambda (n1 k)
+    (lambda (n2)
+      (app-k k (* n1 n2)))))
+
+(define mult-outer-k
+  (lambda (rand2 env k)
+    (lambda (n1)
+      (value-of rand2 env (mult-inner-k n1 k))) ))
+
+;;apply k
+(define app-k
+  (lambda (k^ v^)
+    (k^ v^)))
 
 (define-union envr
   (empty)
