@@ -3,6 +3,8 @@
 ;;Representation Independent with continuations
 
 #lang racket
+
+(require C311/pmatch)
 (require "parenthec.rkt")
 
 (define-union exp
@@ -38,75 +40,76 @@
                 [(let vexp body) (value-of vexp env (let-k body env k))]
                 [(lambda body) (app-k k (clos_closure body env))]
                 [(app rator rand)
-                 (value-of rator env (app-outer-k rand env k))])))
+                 (value-of rator env (rator-k rand env k))])))
 
 ;;empty k
 (define empty-k
-  (lambda (v)
-    v))
+  (lambda ()
+    `(empty-k)))
 
 ;;if-k
 (define if-k
   (lambda (conseq alt env k)
-    (lambda (t)
-      (if t
-          (value-of conseq env k)
-          (value-of alt env k)))))
-
+    `(if-k ,conseq ,alt ,env ,k)))
 
 ;;rator-k
-(define app-outer-k
+(define rator-k
   (lambda (rand env k)
-    (lambda (clos)
-      (value-of rand env (app-inner-k clos k)))))
+    `(rator-k ,rand ,env ,k)))
 
 
 ;;rand-k
-(define app-inner-k
+(define rand-k
   (lambda (clos k)
-    (lambda (a)
-      (apply-closure clos a k))))
+    `(rand-k ,clos ,k)))
 
 
 ;;let-k
 (define let-k
   (lambda (body env k)
-    (lambda (v)
-      (value-of body (envr_extend v env) k))))
+    `(let-k ,body ,env ,k)))
 
 ;;return-k
 (define ret-k
   (lambda (vexp env)
-    (lambda (k^)
-      (value-of vexp env k^))))
+    `(ret-k ,vexp ,env)))
 
 ;;zero-k
 (define zero-k
   (lambda (k)
-    (lambda (n)
-      (app-k k (zero? n)))))
+    `(zero-k ,k)))
 
 ;;sub1-k
 (define sub1-k
   (lambda (k)
-    (lambda (n)
-      (app-k k (- n 1)))))
+    `(sub1-k ,k)))
 
 ;;mult inner and outer k
 (define mult-inner-k
-  (lambda (n1 k)
-    (lambda (n2)
-      (app-k k (* n1 n2)))))
+  (lambda (v^ k)
+    `(mult-inner-k ,v^ ,k)))
 
 (define mult-outer-k
   (lambda (rand2 env k)
-    (lambda (n1)
-      (value-of rand2 env (mult-inner-k n1 k))) ))
+    `(mult-outer-k ,rand2 ,env ,k)))
 
 ;;apply k
 (define app-k
   (lambda (k v)
-    (k v)))
+    (pmatch k
+            [`(mult-outer-k ,rand2 ,env ,k) (value-of rand2 env (mult-inner-k v k))]
+            [`(mult-inner-k ,v^ ,k) (app-k k (* v^ v))]
+            [`(sub1-k ,k) (app-k k (- v 1))]
+            [`(zero-k ,k) (app-k k (zero? v))]
+            [`(ret-k ,vexp ,env) (value-of vexp env v)]
+            [`(let-k ,body ,env ,k) (value-of body (envr_extend v env) k)]
+            [`(rand-k ,clos ,k) (apply-closure clos v k)]
+            [`(rator-k ,rand ,env ,k) (value-of rand env (rand-k v k))]
+            [`(if-k ,conseq ,alt ,env ,k) (if v
+                                              (value-of conseq env k)
+                                              (value-of alt env k))]
+            [`(empty-k) v]
+            [else (k v)])))
 
 (define-union envr
   (empty)
@@ -130,16 +133,14 @@
                 [(closure code env)
                  (value-of code (envr_extend a env) k)])))
 
-
-;;should be 5
+;;should print 5
 (pretty-print
  (value-of (exp_app
             (exp_app
              (exp_lambda (exp_lambda (exp_var 1)))
              (exp_const 5))
             (exp_const 6))
-           (envr_empty) (lambda (v)
-                          v)))
+           (envr_empty) (empty-k)))
 
 ; Factorial of 5...should be 120.
 (pretty-print
@@ -156,9 +157,7 @@
                                 (exp_app
                                  (exp_app (exp_var 1) (exp_var 1))
                                  (exp_sub1 (exp_var 0))))))))
-           (envr_empty) (lambda (v)
-                          v)))
-
+           (envr_empty) (empty-k)))
 ; Test of capture and return...should evaluate to 24.
 (pretty-print
  (value-of
@@ -167,8 +166,7 @@
              (exp_mult (exp_const 5)
                        (exp_return (exp_mult (exp_const 2) (exp_const 6))
                                    (exp_var 0)))))
-  (envr_empty) (lambda (v)
-                 v)))
+  (envr_empty) (empty-k)))
 
 
 (pretty-print
@@ -184,5 +182,4 @@
                  (exp_app (exp_var 1) (exp_var 1))
                  (exp_sub1 (exp_var 0)))))))
             (exp_app (exp_app (exp_var 0) (exp_var 0)) (exp_const 5)))
-           (envr_empty) (lambda (v)
-                          v)))
+           (envr_empty) (empty-k)))

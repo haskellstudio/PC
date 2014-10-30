@@ -1,8 +1,10 @@
 ;;Wendy Kwok
 ;;A9
-;;Representation Independent with continuations
+;;continuation to unions
 
 #lang racket
+
+(require C311/pmatch)
 (require "parenthec.rkt")
 
 (define-union exp
@@ -24,89 +26,47 @@
                 [(const n) (app-k k n)]
                 [(var v) (apply-env env v k)]
                 [(if test conseq alt)
-                 (value-of test env (lambda (t)
-                                      (if t
-                                          (value-of conseq env k)
-                                          (value-of alt env k))))]
-                [(mult rand1 rand2) (value-of rand1 env (mult-outer-k rand2 env k))]
-                [(sub1 rand) (value-of rand env (sub1-k k))]
-                [(zero rand) (value-of rand env (zero-k k))]
+                 (value-of test env (kt_if-k conseq alt env k))]
+                [(mult rand1 rand2) (value-of rand1 env (kt_mult-outer-k rand2 env k))]
+                [(sub1 rand) (value-of rand env (kt_sub1-k k))]
+                [(zero rand) (value-of rand env (kt_zero-k k))]
                 [(capture body)
                  (value-of body (envr_extend k env) k)]
                 [(return vexp kexp)
-                 (value-of kexp env (ret-k vexp env))]
-                [(let vexp body) (value-of vexp env (let-k body env k))]
+                 (value-of kexp env (kt_ret-k vexp env))]
+                [(let vexp body) (value-of vexp env (kt_let-k body env k))]
                 [(lambda body) (app-k k (clos_closure body env))]
                 [(app rator rand)
-                 (value-of rator env (app-outer-k rand env k))])))
+                 (value-of rator env (kt_rator-k rand env k))])))
 
-;;empty k
-(define empty-k
-  (lambda (v)
-    v))
-
-;;if-k
-(define if-k
-  (lambda (conseq alt env k)
-    (lambda (t)
-      (if t
-          (value-of conseq env k)
-          (value-of alt env k)))))
-
-
-;;rator-k
-(define app-outer-k
-  (lambda (rand env k)
-    (lambda (clos)
-      (value-of rand env (app-inner-k clos k)))))
-
-
-;;rand-k
-(define app-inner-k
-  (lambda (clos k)
-    (lambda (a)
-      (apply-closure clos a k))))
-
-
-;;let-k
-(define let-k
-  (lambda (body env k)
-    (lambda (v)
-      (value-of body (envr_extend v env) k))))
-
-;;return-k
-(define ret-k
-  (lambda (vexp env)
-    (lambda (k^)
-      (value-of vexp env k^))))
-
-;;zero-k
-(define zero-k
-  (lambda (k)
-    (lambda (n)
-      (app-k k (zero? n)))))
-
-;;sub1-k
-(define sub1-k
-  (lambda (k)
-    (lambda (n)
-      (app-k k (- n 1)))))
-
-;;mult inner and outer k
-(define mult-inner-k
-  (lambda (n1 k)
-    (lambda (n2)
-      (app-k k (* n1 n2)))))
-
-(define mult-outer-k
-  (lambda (rand2 env k)
-    (lambda (n1)
-      (value-of rand2 env (mult-inner-k n1 k))) ))
+(define-union kt
+  (rator-k rand env k)
+  (rand-k clos k)
+  (let-k body env k)
+  (ret-k vexp env)
+  (zero-k k)
+  (sub1-k k)
+  (mult-inner-k v^ k)
+  (mult-outer-k rand2 env k)
+  (if-k conseq alt env k)
+  (empty-k))
 
 ;;apply k
 (define app-k
   (lambda (k v)
-    (k v)))
+    (union-case k kt
+            [(mult-outer-k rand2 env k) (value-of rand2 env (kt_mult-inner-k v k))]
+            [(mult-inner-k v^ k) (app-k k (* v^ v))]
+            [(sub1-k k) (app-k k (- v 1))]
+            [(zero-k k) (app-k k (zero? v))]
+            [(ret-k vexp env) (value-of vexp env v)]
+            [(let-k body env k) (value-of body (envr_extend v env) k)]
+            [(rand-k clos k) (apply-closure clos v k)]
+            [(rator-k rand env k) (value-of rand env (kt_rand-k v k))]
+            [(if-k conseq alt env k) (if v
+                                         (value-of conseq env k)
+                                         (value-of alt env k))]
+            [(empty-k) v])))
 
 (define-union envr
   (empty)
@@ -130,16 +90,14 @@
                 [(closure code env)
                  (value-of code (envr_extend a env) k)])))
 
-
-;;should be 5
+;;should print 5
 (pretty-print
  (value-of (exp_app
             (exp_app
              (exp_lambda (exp_lambda (exp_var 1)))
              (exp_const 5))
             (exp_const 6))
-           (envr_empty) (lambda (v)
-                          v)))
+           (envr_empty) (kt_empty-k)))
 
 ; Factorial of 5...should be 120.
 (pretty-print
@@ -156,9 +114,7 @@
                                 (exp_app
                                  (exp_app (exp_var 1) (exp_var 1))
                                  (exp_sub1 (exp_var 0))))))))
-           (envr_empty) (lambda (v)
-                          v)))
-
+           (envr_empty) (kt_empty-k)))
 ; Test of capture and return...should evaluate to 24.
 (pretty-print
  (value-of
@@ -167,8 +123,7 @@
              (exp_mult (exp_const 5)
                        (exp_return (exp_mult (exp_const 2) (exp_const 6))
                                    (exp_var 0)))))
-  (envr_empty) (lambda (v)
-                 v)))
+  (envr_empty) (kt_empty-k)))
 
 
 (pretty-print
@@ -184,5 +139,4 @@
                  (exp_app (exp_var 1) (exp_var 1))
                  (exp_sub1 (exp_var 0)))))))
             (exp_app (exp_app (exp_var 0) (exp_var 0)) (exp_const 5)))
-           (envr_empty) (lambda (v)
-                          v)))
+           (envr_empty) (kt_empty-k)))
