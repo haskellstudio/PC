@@ -31,47 +31,47 @@
                 [(const n) (begin (set! k k)
                                   (set! v n)
                                   (app-k))]
-                [(var v) (begin (set! env env^)
+                [(var v) (begin (set! env env)
                                 (set! num v)
                                 (set! k k)
                                 (apply-env))]
                 [(if test conseq alt) (begin (set! expr test)
-                                             (set! env env^)
-                                             (set! k (kt_if-k conseq alt env^ k))
+                                             (set! env env)
+                                             (set! k (kt_if-k conseq alt env k))
                                              (value-of))]
                 [(mult rand1 rand2) (begin (set! expr rand1)
-                                           (set! env env^)
-                                           (set! k (kt_mult-outer-k rand2 env^ k))
+                                           (set! env env)
+                                           (set! k (kt_mult-outer-k rand2 env k))
                                            (value-of))]
                 [(sub1 rand) (begin (set! expr rand)
-                                    (set! env env^)
+                                    (set! env env)
                                     (set! k (kt_sub1-k k))
                                     (value-of))]
                 [(zero rand) (begin (set! expr rand)
-                                    (set! env env^)
+                                    (set! env env)
                                     (set! k (kt_zero-k k))
                                     (value-of))]
                 [(capture body)
                  (begin (set! expr body)
-                        (set! env (envr_extend k env^))
+                        (set! env (envr_extend k env))
                         (set! k k)
                         (value-of))]
                 [(return vexp kexp)
                  (begin (set! expr kexp)
-                        (set! env env^)
-                        (set! k (kt_ret-k vexp env^))
+                        (set! env env)
+                        (set! k (kt_ret-k vexp env))
                         (value-of))]
                 [(let vexp body) (begin (set! expr vexp)
-                                        (set! env env^)
-                                        (set! k (kt_let-k body env^ k))
+                                        (set! env env)
+                                        (set! k (kt_let-k body env k))
                                         (value-of))]
                 [(lambda body) (begin (set! k k)
-                                      (set! v (clos_closure body env^))
+                                      (set! v (clos_closure body env))
                                       (app-k))]
                 [(app rator rand)
                  (begin (set! expr rator)
-                        (set! env env^)
-                        (set! k (kt_rator-k rand env^ k))
+                        (set! env env)
+                        (set! k (kt_rator-k rand env k))
                         (value-of))])))
 
 (define-union kt
@@ -104,11 +104,11 @@
             [(zero-k k^) (begin (set! k k^)
                                 (set! v (zero? v))
                                 (app-k))]
-            [(ret-k vexp env) (begin (set! expr vexp)
+            [(ret-k vexp env^) (begin (set! expr vexp)
                                      (set! env env^)
                                      (set! k v)
                                      (value-of))]
-            [(let-k body env k^)  (begin (set! expr body)
+            [(let-k body env^ k^)  (begin (set! expr body)
                                          (set! env (envr_extend v env^))
                                          (set! k k^)
                                          (value-of))]
@@ -116,11 +116,11 @@
                                      (set! a v)
                                      (set! k k^)
                                      (apply-closure))]
-            [(rator-k rand env k^) (begin (set! expr rand)
+            [(rator-k rand env^ k^) (begin (set! expr rand)
                                           (set! env env^)
                                           (set! k (kt_rand-k v k^))
                                           (value-of))]
-            [(if-k conseq alt env k^) (if v
+            [(if-k conseq alt env^ k^) (if v
                                           (begin (set! expr conseq)
                                                  (set! env env^)
                                                  (set! k k^)
