@@ -27,24 +27,36 @@
                 [(var v) (let* ([env env]
                                 [num v]
                                 [k k]) (apply-env env num k))]
-                [(if test conseq alt)
-                 (value-of test env (kt_if-k conseq alt env k))]
-                [(mult rand1 rand2) (value-of rand1 env (kt_mult-outer-k rand2 env k))]
-                [(sub1 rand) (value-of rand env (kt_sub1-k k))]
+                [(if test conseq alt) (let* ([expr test]
+                                             [env env]
+                                             [k (kt_if-k conseq alt env k)])
+                                        [value-of expr env k])]
+                [(mult rand1 rand2) (let* ([expr rand1]
+                                           [env env]
+                                           [k (kt_mult-outer-k rand2 env k)])
+                                      (value-of expr env k))]
+                [(sub1 rand) (let* ([expr rand]
+                                    [env env]
+                                    [k (kt_sub1-k k)])
+                               (value-of expr env k))]
                 [(zero rand) (let* ([expr rand]
                                     [env env]
-                                    [k (kt_zero-k k)]) (value-of expr env k))]
+                                    [k (kt_zero-k k)])
+                               (value-of expr env k))]
                 [(capture body)
                  (let* ([expr body]
                         [env (envr_extend k env)]
-                        [k k]) (value-of expr env k))]
+                        [k k])
+                   (value-of expr env k))]
                 [(return vexp kexp)
                  (let* ([expr kexp]
                         [env env]
-                        [k (kt_ret-k vexp env)]) (value-of expr env k))]
+                        [k (kt_ret-k vexp env)])
+                   (value-of expr env k))]
                 [(let vexp body) (let* ([expr vexp]
                                         [env env]
-                                        [k (kt_let-k body env k)]) (value-of expr env k))]
+                                        [k (kt_let-k body env k)])
+                                   (value-of expr env k))]
                 [(lambda body) (let* ([k k]
                                       [v (clos_closure body env)])
                                  (app-k k v))]
@@ -118,7 +130,8 @@
   (lambda (env num k)
     (union-case env envr
                 [(empty) (let* ([k k]
-                                [v (error 'env "unbound variable")]) (app-k k v))]
+                                [v (error 'env "unbound variable")])
+                           (app-k k v))]
                 [(extend arg env)
                  (if (zero? num)
                      (let* ([k k]
