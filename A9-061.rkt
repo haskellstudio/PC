@@ -20,7 +20,7 @@
   (app rator rand))
 
 ;;define registers
-(define-registers env num expr v c a k n rand rator body vexp kexp rand2 k^ clos conseq alt arg code)
+(define-registers env num expr v c a k)
 
 ;;define pc
 (define-program-counter pc)
@@ -30,49 +30,49 @@
     (union-case expr exp
                 [(const n) (begin (set! k k)
                                   (set! v n)
-                                  (set! pc app-k))]
+                                  (app-k))]
                 [(var v) (begin (set! env env)
                                 (set! num v)
                                 (set! k k)
-                                (set! pc apply-env))]
+                                (apply-env))]
                 [(if test conseq alt) (begin (set! expr test)
                                              (set! env env)
                                              (set! k (kt_if-k conseq alt env k))
-                                             (set! pc value-of))]
+                                             (value-of))]
                 [(mult rand1 rand2) (begin (set! expr rand1)
                                            (set! env env)
                                            (set! k (kt_mult-outer-k rand2 env k))
-                                           (set! pc value-of))]
+                                           (value-of))]
                 [(sub1 rand) (begin (set! expr rand)
                                     (set! env env)
                                     (set! k (kt_sub1-k k))
-                                    (set! pc value-of))]
+                                    (value-of))]
                 [(zero rand) (begin (set! expr rand)
                                     (set! env env)
                                     (set! k (kt_zero-k k))
-                                    (set! pc value-of))]
+                                    (value-of))]
                 [(capture body)
                  (begin (set! expr body)
                         (set! env (envr_extend k env))
                         (set! k k)
-                        (set! pc value-of))]
+                        (value-of))]
                 [(return vexp kexp)
                  (begin (set! expr kexp)
                         (set! env env)
                         (set! k (kt_ret-k vexp env))
-                        (set! pc value-of))]
+                        (value-of))]
                 [(let vexp body) (begin (set! expr vexp)
                                         (set! env env)
                                         (set! k (kt_let-k body env k))
-                                        (set! pc value-of))]
+                                        (value-of))]
                 [(lambda body) (begin (set! k k)
                                       (set! v (clos_closure body env))
-                                      (set! pc app-k))]
+                                      (app-k))]
                 [(app rator rand)
                  (begin (set! expr rator)
                         (set! env env)
                         (set! k (kt_rator-k rand env k))
-                        (set! pc value-of))])))
+                        (value-of))])))
 
 (define-union kt
   (rator-k rand env k^)
@@ -94,41 +94,41 @@
                 [(mult-outer-k rand2 env k^) (begin (set! expr rand2)
                                                     (set! env env)
                                                     (set! k (kt_mult-inner-k v k^))
-                                                    (set! pc value-of))]
+                                                    (value-of))]
             [(mult-inner-k v^ k^) (begin (set! k k^)
                                          (set! v (* v^ v))
-                                         (set! pc app-k))]
+                                         (app-k))]
             [(sub1-k k^) (begin (set! k k^)
                                 (set! v (- v 1))
-                                (set! pc app-k))]
+                                (app-k))]
             [(zero-k k^) (begin (set! k k^)
                                 (set! v (zero? v))
-                                (set! pc app-k))]
+                                (app-k))]
             [(ret-k vexp env) (begin (set! expr vexp)
                                      (set! env env)
                                      (set! k v)
-                                     (set! pc value-of))]
+                                     (value-of))]
             [(let-k body env k^)  (begin (set! expr body)
                                          (set! env (envr_extend v env))
                                          (set! k k^)
-                                         (set! pc value-of))]
+                                         (value-of))]
             [(rand-k clos k^) (begin (set! c clos)
                                      (set! a v)
                                      (set! k k^)
-                                     (set! pc apply-closure))]
+                                     (apply-closure))]
             [(rator-k rand env k^) (begin (set! expr rand)
                                           (set! env env)
                                           (set! k (kt_rand-k v k^))
-                                          (set! pc value-of))]
+                                          (value-of))]
             [(if-k conseq alt env k^) (if v
                                           (begin (set! expr conseq)
                                                  (set! env env)
                                                  (set! k k^)
-                                                 (set! pc value-of))
+                                                 (value-of))
                                           (begin (set! expr alt)
                                                  (set! env env)
                                                  (set! k k^)
-                                                 (set! pc value-of)))]
+                                                 (value-of)))]
             [(empty-k) v])))
 
 (define-union envr
@@ -140,16 +140,16 @@
     (union-case env envr
                 [(empty) (begin (set! k k)
                            (set! v (error 'env "unbound variable"))
-                           (set! pc app-k))]
+                           (app-k))]
                 [(extend arg env)
                  (if (zero? num)
                      (begin (set! k k)
                             (set! v arg)
-                            (set! pc app-k))
+                            (app-k))
                      (begin (set! env env)
                             (set! num (sub1 num))
                             (set! k k)
-                            (set! pc apply-env)))])))
+                            (apply-env)))])))
 
 (define-union clos
   (closure code env))
@@ -161,7 +161,7 @@
                  (begin (set! expr code)
                         (set! env (envr_extend a env))
                         (set! k k)
-                        (set! pc value-of))])))
+                        (value-of))])))
 
 
 ;;should print 5
@@ -173,7 +173,7 @@
                      (exp_const 6)))
          (set! env (envr_empty))
          (set! k (kt_empty-k))
-         (set! pc value-of)))
+         (value-of)))
 
 #|
 ; Factorial of 5...should be 120.
