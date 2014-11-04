@@ -137,7 +137,7 @@
 
 (define apply-env
   (lambda ()
-    (union-case env^ envr
+    (union-case env envr
                 [(empty) (begin (set! k k)
                            (set! v (error 'env "unbound variable"))
                            (app-k))]
@@ -175,46 +175,54 @@
          (set! k (kt_empty-k))
          (value-of)))
 
-#|
-; Factorial of 5...should be 120.
+
+                                        ; Factorial of 5...should be 120.
 (pretty-print
- (value-of (exp_app
-            (exp_lambda
-             (exp_app
-              (exp_app (exp_var 0) (exp_var 0))
-              (exp_const 5)))
-            (exp_lambda
-             (exp_lambda
-              (exp_if (exp_zero (exp_var 0))
-                      (exp_const 1)
-                      (exp_mult (exp_var 0)
-                                (exp_app
-                                 (exp_app (exp_var 1) (exp_var 1))
-                                 (exp_sub1 (exp_var 0))))))))
-           (envr_empty) (kt_empty-k)))
-; Test of capture and return...should evaluate to 24.
+ (begin
+   (set! env (envr_empty))
+   (set! k (kt_empty-k))
+   (set! expr
+         (exp_app
+          (exp_lambda
+           (exp_app
+            (exp_app (exp_var 0) (exp_var 0))
+            (exp_const 5)))
+          (exp_lambda
+           (exp_lambda
+            (exp_if (exp_zero (exp_var 0))
+                    (exp_const 1)
+                    (exp_mult (exp_var 0)
+                              (exp_app
+                               (exp_app (exp_var 1) (exp_var 1))
+                               (exp_sub1 (exp_var 0)))))))))
+   (value-of)))
+                                        ; Test of capture and return...should evaluate to 24.
 (pretty-print
- (value-of
-  (exp_mult (exp_const 2)
-            (exp_capture
-             (exp_mult (exp_const 5)
-                       (exp_return (exp_mult (exp_const 2) (exp_const 6))
-                                   (exp_var 0)))))
-  (envr_empty) (kt_empty-k)))
+ (begin
+   (set! env (envr_empty))
+   (set! k (kt_empty-k))
+   (set! expr (exp_mult (exp_const 2)
+                        (exp_capture
+                         (exp_mult (exp_const 5)
+                                   (exp_return (exp_mult (exp_const 2) (exp_const 6))
+                                               (exp_var 0))))))
+     (value-of)))
 
 
 (pretty-print
- (value-of (exp_let
-            (exp_lambda
-             (exp_lambda
-              (exp_if
-               (exp_zero (exp_var 0))
-               (exp_const 1)
-               (exp_mult
-                (exp_var 0)
-                (exp_app
-                 (exp_app (exp_var 1) (exp_var 1))
-                 (exp_sub1 (exp_var 0)))))))
-            (exp_app (exp_app (exp_var 0) (exp_var 0)) (exp_const 5)))
-           (envr_empty) (kt_empty-k)))
-|#
+ (begin
+   (set! env (envr_empty))
+   (set! k (kt_empty-k))
+   (set! expr (exp_let
+               (exp_lambda
+                (exp_lambda
+                 (exp_if
+                  (exp_zero (exp_var 0))
+                  (exp_const 1)
+                  (exp_mult
+                   (exp_var 0)
+                   (exp_app
+                    (exp_app (exp_var 1) (exp_var 1))
+                    (exp_sub1 (exp_var 0)))))))
+               (exp_app (exp_app (exp_var 0) (exp_var 0)) (exp_const 5))))
+   (value-of)))
