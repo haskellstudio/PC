@@ -1,11 +1,11 @@
 ;;Wendy Kwok
 ;;A9
-;;Registerize
+;;Add main function
 
 #lang racket
-
 (require "parenthec.rkt")
 
+;;define-union
 (define-union exp
   (const n)
   (var v)
@@ -164,65 +164,57 @@
                         (value-of))])))
 
 
-;;should print 5
-(pretty-print
- (begin  (set! expr (exp_app
-                     (exp_app
-                      (exp_lambda (exp_lambda (exp_var 1)))
-                      (exp_const 5))
-                     (exp_const 6)))
-         (set! env (envr_empty))
-         (set! k (kt_empty-k))
-         (value-of)))
+;; the main function
+(define main
+  (lambda ()
+    (begin
+      (set! expr (exp_app
+                  (exp_app
+                   (exp_lambda (exp_lambda (exp_var 1)))
+                   (exp_const 5))
+                  (exp_const 6)))
+      (set! env (envr_empty))
+      (set! k (kt_empty-k))
+      (printf "~s\n" (value-of))
+      (set! env (envr_empty))
+      (set! k (kt_empty-k))
+      (set! expr
+            (exp_app
+             (exp_lambda
+              (exp_app
+               (exp_app (exp_var 0) (exp_var 0))
+               (exp_const 5)))
+             (exp_lambda
+              (exp_lambda
+               (exp_if (exp_zero (exp_var 0))
+                       (exp_const 1)
+                       (exp_mult (exp_var 0)
+                                 (exp_app
+                                  (exp_app (exp_var 1) (exp_var 1))
+                                  (exp_sub1 (exp_var 0)))))))))
+      (printf "~s\n" (value-of))
+      (set! env (envr_empty))
+      (set! k (kt_empty-k))
+      (set! expr (exp_mult (exp_const 2)
+                           (exp_capture
+                            (exp_mult (exp_const 5)
+                                      (exp_return (exp_mult (exp_const 2) (exp_const 6))
+                                                  (exp_var 0))))))
+      (printf "~s\n" (value-of))
+      (set! env (envr_empty))
+      (set! k (kt_empty-k))
+      (set! expr (exp_let
+                  (exp_lambda
+                   (exp_lambda
+                    (exp_if
+                     (exp_zero (exp_var 0))
+                     (exp_const 1)
+                     (exp_mult
+                      (exp_var 0)
+                      (exp_app
+                       (exp_app (exp_var 1) (exp_var 1))
+                       (exp_sub1 (exp_var 0)))))))
+                  (exp_app (exp_app (exp_var 0) (exp_var 0)) (exp_const 5))))
+      (printf "~s\n" (value-of)))))
 
-
-                                        ; Factorial of 5...should be 120.
-(pretty-print
- (begin
-   (set! env (envr_empty))
-   (set! k (kt_empty-k))
-   (set! expr
-         (exp_app
-          (exp_lambda
-           (exp_app
-            (exp_app (exp_var 0) (exp_var 0))
-            (exp_const 5)))
-          (exp_lambda
-           (exp_lambda
-            (exp_if (exp_zero (exp_var 0))
-                    (exp_const 1)
-                    (exp_mult (exp_var 0)
-                              (exp_app
-                               (exp_app (exp_var 1) (exp_var 1))
-                               (exp_sub1 (exp_var 0)))))))))
-   (value-of)))
-                                        ; Test of capture and return...should evaluate to 24.
-(pretty-print
- (begin
-   (set! env (envr_empty))
-   (set! k (kt_empty-k))
-   (set! expr (exp_mult (exp_const 2)
-                        (exp_capture
-                         (exp_mult (exp_const 5)
-                                   (exp_return (exp_mult (exp_const 2) (exp_const 6))
-                                               (exp_var 0))))))
-     (value-of)))
-
-
-(pretty-print
- (begin
-   (set! env (envr_empty))
-   (set! k (kt_empty-k))
-   (set! expr (exp_let
-               (exp_lambda
-                (exp_lambda
-                 (exp_if
-                  (exp_zero (exp_var 0))
-                  (exp_const 1)
-                  (exp_mult
-                   (exp_var 0)
-                   (exp_app
-                    (exp_app (exp_var 1) (exp_var 1))
-                    (exp_sub1 (exp_var 0)))))))
-               (exp_app (exp_app (exp_var 0) (exp_var 0)) (exp_const 5))))
-   (value-of)))
+(main)
